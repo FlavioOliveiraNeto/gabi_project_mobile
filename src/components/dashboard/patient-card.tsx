@@ -20,6 +20,7 @@ import {
   getClinicalNotes,
   NOTES_PAGE_SIZE,
   updateClinicalNote,
+  slotsFromPatient,
   type CalendarSession,
   type ClinicalNote,
   type PatientUser,
@@ -632,9 +633,10 @@ export default function PatientCard({
             {patient.sessions_per_week > 0 ? (
               <Text style={s.chip}>{patient.sessions_per_week}x/semana</Text>
             ) : null}
-            {patient.session_days.map((day) => (
-              <Text key={day} style={[s.chip, s.chipAccent]}>
-                {WEEKDAY_LABELS[day] ?? day}
+            {slotsFromPatient(patient).map((slot) => (
+              <Text key={slot.weekday} style={[s.chip, s.chipAccent]}>
+                {WEEKDAY_LABELS[slot.weekday] ?? slot.weekday}
+                {slot.time ? ` ${slot.time}` : ''}
               </Text>
             ))}
           </>
@@ -644,9 +646,6 @@ export default function PatientCard({
           </Text>
         ) : null}
 
-        {patient.session_time ? (
-          <Text style={[s.chip, s.chipAccent]}>{patient.session_time}</Text>
-        ) : null}
       </View>
 
       {patient.schedule_type === 'extra' && extras.length > 0 ? (

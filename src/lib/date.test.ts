@@ -53,54 +53,42 @@ assert.equal(hasStarted("2026-11-18", "09:00", noon), false);
 
 const draft: ScheduleDraft = {
   schedule_type: "regular",
-  sessions_per_week: 0,
-  weekdays: [],
-  session_time: "",
+  slots: [],
   single_date: "",
   single_time: "",
 };
 
 assert.equal(scheduleError(draft), undefined);
 
-assert.match(
-  scheduleError({
-    ...draft,
-    sessions_per_week: 3,
-    weekdays: ["monday"],
-    session_time: "14:30",
-  })!,
-  /Selecione 3 dia/,
-);
-assert.match(
-  scheduleError({
-    ...draft,
-    sessions_per_week: 1,
-    weekdays: ["monday", "friday"],
-    session_time: "14:30",
-  })!,
-  /marcou 2 dias/,
-);
 assert.equal(
   scheduleError({
     ...draft,
-    sessions_per_week: 2,
-    weekdays: ["monday", "friday"],
-    session_time: "14:30",
+    slots: [
+      { weekday: "saturday", time: "08:00" },
+      { weekday: "wednesday", time: "19:00" },
+    ],
   }),
   undefined,
 );
 assert.match(
-  scheduleError({ ...draft, weekdays: ["monday"] })!,
-  /quantas sessões/,
+  scheduleError({
+    ...draft,
+    slots: [
+      { weekday: "monday", time: "14:30" },
+      { weekday: "friday", time: "99:99" },
+    ],
+  })!,
+  /horário válido/,
 );
 assert.match(
   scheduleError({
     ...draft,
-    sessions_per_week: 1,
-    weekdays: ["monday"],
-    session_time: "99:99",
+    slots: [
+      { weekday: "monday", time: "10:00" },
+      { weekday: "monday", time: "11:00" },
+    ],
   })!,
-  /horário válido/,
+  /repetido/,
 );
 
 assert.equal(scheduleError({ ...draft, schedule_type: "extra" }), undefined);

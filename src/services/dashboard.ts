@@ -14,6 +14,23 @@ export interface ExtraSession {
   status: string;
 }
 
+export interface ScheduleSlot {
+  weekday: string;
+  time: string;
+}
+
+export interface ScheduleConflict {
+  weekday: string;
+  time: string;
+  scheduled_at: string;
+  reason: string;
+}
+
+export interface ConflictResponse {
+  error: string;
+  conflicts: ScheduleConflict[];
+}
+
 export interface PatientUser {
   id: number;
   name: string;
@@ -23,7 +40,9 @@ export interface PatientUser {
   schedule_type?: "regular" | "extra" | null;
   sessions_per_week: number;
   session_days: string[];
+  /** @deprecated horário do primeiro dia; use schedule_slots. */
   session_time: string | null;
+  schedule_slots?: ScheduleSlot[];
   extra_sessions: ExtraSession[];
   completed_sessions: number;
   absent_sessions: number;
@@ -77,8 +96,11 @@ export interface CreatePatientParams {
   google_meet_link?: string;
 
   schedule_type?: "regular" | "extra";
+  schedule_slots?: ScheduleSlot[];
   sessions_per_week?: number;
+  /** @deprecated payload legado; prefira schedule_slots. */
   weekdays?: string[];
+  /** @deprecated payload legado; prefira schedule_slots. */
   session_time?: string;
   single_date?: string;
   single_time?: string;
@@ -97,8 +119,11 @@ export interface UpdatePatientParams {
 
 export interface UpdateScheduleParams {
   schedule_type: "regular" | "extra";
+  schedule_slots?: ScheduleSlot[];
   sessions_per_week?: number;
+  /** @deprecated payload legado; prefira schedule_slots. */
   weekdays?: string[];
+  /** @deprecated payload legado; prefira schedule_slots. */
   session_time?: string;
   single_date?: string;
   single_time?: string;
@@ -269,4 +294,40 @@ export async function updatePatientNote(
 
 export async function deletePatientNote(id: number): Promise<void> {
   await api.delete(`/clients/patient_notes/${id}`);
+}
+
+export const WEEKDAY_ORDER = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+export function sortSlots(slots: ScheduleSlot[]): ScheduleSlot[] {
+  return [...slots].sort(
+    (a, b) =>
+      WEEKDAY_ORDER.indexOf(a.weekday as (typeof WEEKDAY_ORDER)[number]) -
+      WEEKDAY_ORDER.indexOf(b.weekday as (typeof WEEKDAY_ORDER)[number]),
+  );
+}
+
+export function slotsFromPatient(p: PatientUser): ScheduleSlot[] {
+  if (p.schedule_slots?.length) return sortSlots(p.schedule_slots);
+
+  return sortSlots(
+    (p.session_days ?? []).map((weekday) => ({
+      weekday,
+      time: p.session_time ?? "",
+    })),
+  );
+}
+
+export function conflictSlots(err: unknown): ScheduleConflict[] {
+  const data = (err as { response?: { data?: ConflictResponse } })?.response
+    ?.data;
+
+  return Array.isArray(data?.conflicts) ? data.conflicts : [];
 }

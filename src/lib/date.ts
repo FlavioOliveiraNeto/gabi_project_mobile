@@ -99,31 +99,26 @@ export function hasStarted(
   return `${date} ${time}` <= `${toKey(now)} ${clock}`;
 }
 
+export type DraftSlot = { weekday: string; time: string };
+
 export type ScheduleDraft = {
   schedule_type: "regular" | "extra";
-  sessions_per_week: number;
-  weekdays: string[];
-  session_time: string;
+  slots: DraftSlot[];
   single_date: string;
   single_time: string;
 };
 
 export function scheduleError(form: ScheduleDraft): string | undefined {
   if (form.schedule_type === "regular") {
-    const started =
-      form.sessions_per_week > 0 ||
-      form.weekdays.length > 0 ||
-      !!form.session_time;
-    if (!started) return undefined;
+    if (form.slots.length === 0) return undefined;
 
-    if (form.sessions_per_week < 1)
-      return "Escolha quantas sessões por semana.";
-    if (form.weekdays.length < form.sessions_per_week)
-      return `Selecione ${form.sessions_per_week} dia(s) para ${form.sessions_per_week} sessão(ões) por semana.`;
-    if (form.weekdays.length > form.sessions_per_week)
-      return `Você marcou ${form.weekdays.length} dias para ${form.sessions_per_week} sessão(ões) por semana.`;
-    if (!isValidTime(form.session_time))
-      return "Informe um horário válido (HH:MM).";
+    const invalid = form.slots.filter((slot) => !isValidTime(slot.time));
+    if (invalid.length > 0)
+      return "Informe um horário válido (HH:MM) para cada dia marcado.";
+
+    const days = form.slots.map((slot) => slot.weekday);
+    if (new Set(days).size !== days.length) return "Há dia da semana repetido.";
+
     return undefined;
   }
 

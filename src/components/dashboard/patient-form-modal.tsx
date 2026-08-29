@@ -7,11 +7,15 @@ import { Btn, ErrorText, Field, Sheet, apiErrorMessage, s } from '@/components/u
 import { C } from '@/constants/theme';
 import { fromIsoDate, isValidTime, maskDate, maskTime, scheduleError, toIsoDate } from '@/lib/date';
 import {
+  conflictSlots,
   createPatient,
+  slotsFromPatient,
+  sortSlots,
   updatePatient,
   updatePatientSchedule,
   type CreatePatientParams,
   type PatientUser,
+  type ScheduleSlot,
 } from '@/services/dashboard';
 
 const WEEKDAYS: [string, string][] = [
@@ -24,17 +28,23 @@ const WEEKDAYS: [string, string][] = [
   ['saturday', 'Sáb'],
 ];
 
+const WEEKDAY_LABEL: Record<string, string> = Object.fromEntries(WEEKDAYS);
+
+const DEFAULT_SLOT_TIME = '09:00';
+
 const EMPTY = {
   name: '',
   email: '',
   google_meet_link: '',
   schedule_type: 'regular' as 'regular' | 'extra',
-  sessions_per_week: 0,
-  weekdays: [] as string[],
-  session_time: '',
+  slots: [] as ScheduleSlot[],
   single_date: '',
   single_time: '',
 };
+
+function slotsEqual(a: ScheduleSlot[], b: ScheduleSlot[]): boolean {
+  return JSON.stringify(sortSlots(a)) === JSON.stringify(sortSlots(b));
+}
 
 function Chip({
   label,
@@ -71,9 +81,7 @@ function initialForm(p: PatientUser | null): typeof EMPTY {
   };
 
   if (p.schedule_type === 'regular') {
-    next.sessions_per_week = p.sessions_per_week ?? 0;
-    next.weekdays = [...(p.session_days ?? [])];
-    next.session_time = p.session_time ?? '';
+    next.slots = slotsFromPatient(p);
   }
 
   if (p.schedule_type === 'extra') {
@@ -101,6 +109,7 @@ export default function PatientFormModal({
 
   const [form, setForm] = useState(() => initialForm(patientToEdit));
   const [errors, setErrors] = useState<{ name?: string; email?: string; schedule?: string }>({});
+  const [conflictedDays, setConflictedDays] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -109,6 +118,28 @@ export default function PatientFormModal({
 
   const set = <K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  function toggleDay(day: string) {
+    setForm((f) => ({
+      ...f,
+      slots: f.slots.some((slot) => slot.weekday === day)
+        ? f.slots.filter((slot) => slot.weekday !== day)
+        : [...f.slots, { weekday: day, time: DEFAULT_SLOT_TIME }],
+    }));
+
+    setConflictedDays((days) => {
+      const next = new Set(days);
+      next.delete(day);
+      return next;
+    });
+  }
+
+  function setSlotTime(day: string, time: string) {
+    setForm((f) => ({
+      ...f,
+      slots: f.slots.map((slot) => (slot.weekday === day ? { ...slot, time } : slot)),
+    }));
+  }
 
   function validate(): boolean {
     const next: typeof errors = {};
@@ -128,6 +159,7 @@ export default function PatientFormModal({
 
     setIsLoading(true);
     setFormError('');
+    setConflictedDays(new Set());
 
     const singleDateIso = toIsoDate(form.single_date);
 
@@ -141,15 +173,10 @@ export default function PatientFormModal({
           google_meet_link: form.google_meet_link.trim() || undefined,
         });
 
-        const originalDays = [...(original.session_days ?? [])].sort();
-        const newDays = [...form.weekdays].sort();
-
         const weeklyChanged =
           form.schedule_type === 'regular' &&
           (form.schedule_type !== original.schedule_type ||
-            form.session_time !== original.session_time ||
-            form.sessions_per_week !== original.sessions_per_week ||
-            JSON.stringify(newDays) !== JSON.stringify(originalDays));
+            !slotsEqual(form.slots, slotsFromPatient(original)));
 
         const extraChanged =
           form.schedule_type === 'extra' &&
@@ -159,9 +186,7 @@ export default function PatientFormModal({
         if (weeklyChanged) {
           await updatePatientSchedule(original.id, {
             schedule_type: 'regular',
-            sessions_per_week: form.sessions_per_week || undefined,
-            weekdays: form.weekdays.length > 0 ? form.weekdays : undefined,
-            session_time: form.session_time || undefined,
+            schedule_slots: sortSlots(form.slots),
           });
         }
 
@@ -187,9 +212,7 @@ export default function PatientFormModal({
       };
 
       if (form.schedule_type === 'regular') {
-        payload.sessions_per_week = form.sessions_per_week || undefined;
-        payload.weekdays = form.weekdays.length > 0 ? form.weekdays : undefined;
-        payload.session_time = form.session_time || undefined;
+        payload.schedule_slots = sortSlots(form.slots);
       } else {
         payload.single_date = singleDateIso || undefined;
         payload.single_time = form.single_time || undefined;
@@ -200,6 +223,7 @@ export default function PatientFormModal({
       setGeneratedPassword(created.generated_password);
       onSaved();
     } catch (err) {
+      setConflictedDays(new Set(conflictSlots(err).map((c) => c.weekday)));
       setFormError(apiErrorMessage(err, 'Erro ao salvar paciente.'));
     } finally {
       setIsLoading(false);
@@ -304,47 +328,39 @@ export default function PatientFormModal({
 
         {form.schedule_type === 'regular' ? (
           <>
-            <Text style={s.label}>Sessões por semana</Text>
-            <View style={[s.row, { gap: 6, flexWrap: 'wrap', marginBottom: 14 }]}>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => (
-                <Chip
-                  key={n}
-                  label={n === 0 ? '—' : `${n}x`}
-                  active={form.sessions_per_week === n}
-                  onPress={() => set('sessions_per_week', n)}
-                />
-              ))}
-            </View>
-
             <Text style={s.label}>Dias das sessões</Text>
+            <Text style={[s.label, { fontWeight: '400', marginBottom: 8 }]}>
+              Cada dia tem seu próprio horário. A sessão dura 50 minutos, com 10 de
+              intervalo até a próxima.
+            </Text>
             <View style={[s.row, { gap: 6, flexWrap: 'wrap', marginBottom: 14 }]}>
               {WEEKDAYS.map(([day, label]) => (
                 <Chip
                   key={day}
                   label={label}
-                  active={form.weekdays.includes(day)}
-                  onPress={() =>
-                    set(
-                      'weekdays',
-                      form.weekdays.includes(day)
-                        ? form.weekdays.filter((d) => d !== day)
-                        : [...form.weekdays, day],
-                    )
-                  }
+                  active={form.slots.some((slot) => slot.weekday === day)}
+                  onPress={() => toggleDay(day)}
                 />
               ))}
             </View>
 
-            <Field
-              label="Horário da sessão (HH:MM)"
-              value={form.session_time}
-              onChangeText={(v) => set('session_time', maskTime(v))}
-              keyboardType="number-pad"
-              placeholder="14:30"
-              error={
-                form.session_time && !isValidTime(form.session_time) ? 'Horário inválido.' : undefined
-              }
-            />
+            {sortSlots(form.slots).map((slot) => (
+              <Field
+                key={slot.weekday}
+                label={`Horário de ${WEEKDAY_LABEL[slot.weekday]} (HH:MM)`}
+                value={slot.time}
+                onChangeText={(v) => setSlotTime(slot.weekday, maskTime(v))}
+                keyboardType="number-pad"
+                placeholder="14:30"
+                error={
+                  conflictedDays.has(slot.weekday)
+                    ? 'Horário já ocupado. Escolha outro.'
+                    : slot.time && !isValidTime(slot.time)
+                      ? 'Horário inválido.'
+                      : undefined
+                }
+              />
+            ))}
           </>
         ) : (
           <>
