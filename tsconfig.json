@@ -11,6 +11,9 @@
       ]
     }
   },
+  "exclude": [
+    "src/**/*.test.ts"
+  ],
   "include": [
     "**/*.ts",
     "**/*.tsx",
