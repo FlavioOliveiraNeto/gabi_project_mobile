@@ -186,16 +186,20 @@ export function TapRow({
   label,
   children,
   style,
+  disabled,
 }: {
   onPress: () => void;
   label: string;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+      disabled={disabled}
       onPress={onPress}
       hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
       style={[s.row, { gap: 4, paddingVertical: 4 }, style]}>

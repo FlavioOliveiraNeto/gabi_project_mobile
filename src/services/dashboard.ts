@@ -331,3 +331,20 @@ export function conflictSlots(err: unknown): ScheduleConflict[] {
 
   return Array.isArray(data?.conflicts) ? data.conflicts : [];
 }
+
+export async function transcribeAudio(uri: string, signal?: AbortSignal): Promise<string> {
+  const form = new FormData();
+  form.append("audio", {
+    uri,
+    name: "nota.m4a",
+    type: "audio/m4a",
+  } as unknown as Blob);
+
+  const { data } = await api.post<{ text: string }>(
+    "/therapists/transcription",
+    form,
+    { headers: { "Content-Type": "multipart/form-data" }, timeout: 120000, signal },
+  );
+
+  return data.text;
+}

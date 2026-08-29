@@ -27,6 +27,7 @@ import {
 } from '@/services/dashboard';
 
 import ConfirmModal from './confirm-modal';
+import DictateButton from './dictate-button';
 
 const WEEKDAY_LABELS: Record<string, string> = {
   sunday: 'Dom',
@@ -447,11 +448,25 @@ function ClinicalNotes({
             style={[s.input, { minHeight: 96, textAlignVertical: 'top' }]}
           />
 
-          {remaining <= 500 ? (
-            <Text style={[s.muted, { fontSize: 12, textAlign: 'right' }]}>
-              {remaining} caracteres restantes
-            </Text>
-          ) : null}
+          <View style={[s.row, { gap: 8 }]}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <DictateButton
+                disabled={savingNote}
+                onTranscript={(text) => {
+                  const merged = newNote.trim() ? `${newNote.trim()} ${text}` : text;
+                  setNewNote(merged.slice(0, 5000));
+                  if (merged.length > 5000) {
+                    setNotesError(
+                      'A transcrição passou do limite de 5000 caracteres e foi cortada no fim. Revise antes de salvar.',
+                    );
+                  }
+                }}
+              />
+            </View>
+            {remaining <= 500 ? (
+              <Text style={[s.muted, { fontSize: 12 }]}>{remaining} restantes</Text>
+            ) : null}
+          </View>
 
           <Btn
             title="Salvar anotação"
