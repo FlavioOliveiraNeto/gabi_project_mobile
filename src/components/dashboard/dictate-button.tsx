@@ -22,20 +22,14 @@ import { TapRow, apiErrorMessage, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { transcribeAudio } from '@/services/dashboard';
 
-// ponytail: teto de gravação — uma gravação esquecida vira upload gigante e timeout
 const MAX_SECONDS = 5 * 60;
 const WARN_SECONDS = 30;
-// acima disso, descartar pede confirmação: já há fala suficiente para doer
 const CONFIRM_OVER_SECONDS = 5;
-// espera até avisar que o envio está demorando
 const SLOW_UPLOAD_SECONDS = 8;
-// silêncio contínuo até avisar que nada está sendo captado
 const SILENCE_SECONDS = 3;
 
-// metering alimenta o poço do microfone; o preset sozinho não o liga
 const RECORDING_OPTIONS = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true };
 
-// dBFS de voz útil vive entre -50 e -5; abaixo do piso é silêncio
 const DB_FLOOR = -50;
 const DB_CEIL = -5;
 
@@ -46,14 +40,6 @@ function clock(seconds: number) {
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
 }
 
-/**
- * O poço do microfone é o único objeto animado do componente e atravessa as fases
- * sem desmontar: pulsa com a voz enquanto grava, gira enquanto transcreve, repousa
- * no resto do tempo. A continuidade é o efeito.
- *
- * O anel só se move com dB real — sem medição ele fica parado, porque uma animação
- * que simula escuta é mentira num aparelho com o microfone bloqueado.
- */
 function MicWell({
   mode,
   level,
@@ -192,7 +178,6 @@ export default function DictateButton({
     return () => sub.remove();
   }, []);
 
-  // ponytail: sair da tela no meio da gravação não pode deixar o microfone aberto
   useEffect(
     () => () => {
       abortRef.current?.abort();

@@ -23,7 +23,6 @@ export const C = {
   green: "#16A34A",
   red: "#EF4444",
   yellow: "#EAB308",
-  // status: gravação em andamento — família âmbar (atenção acionável), ver DESIGN.md
   recording: "#D97706",
   recordingSurface: "#FEF3C7",
   recordingPanel: "#FFFBEB",
