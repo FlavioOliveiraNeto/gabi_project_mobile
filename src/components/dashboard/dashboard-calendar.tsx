@@ -2,13 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { IconBtn, initials, s } from '@/components/ui';
+import { IconBtn, TapRow, initials, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import {
   addMonths,
   formatDayMonth,
   formatMonthYear,
+  formatShort,
+  parseDate,
   isToday,
+  isSameMonth,
   monthGrid,
   startOfDay,
   toKey,
@@ -57,12 +60,8 @@ export default function DashboardCalendar({
   const isSelectedDatePast = startOfDay(selectedDate) < startOfDay(new Date());
 
   async function applyStatus(sessionId: number, status: 'absent' | 'cancelled') {
-    try {
-      await updateSessionStatus(sessionId, status);
-      onReload();
-    } catch (error) {
-      console.error('Erro ao atualizar sessão:', error);
-    }
+    await updateSessionStatus(sessionId, status);
+    onReload();
   }
 
   return (
@@ -72,6 +71,18 @@ export default function DashboardCalendar({
           <Ionicons name="calendar-outline" size={18} color={C.primary} />
           <Text style={s.title}>{formatMonthYear(base)}</Text>
           <View style={[s.row, { marginLeft: 'auto' }]}>
+            {isToday(selectedDate) && isSameMonth(base, new Date()) ? null : (
+              <TapRow
+                label="Voltar para hoje"
+                onPress={() => {
+                  const now = new Date();
+                  setBase(now);
+                  setSelectedDate(startOfDay(now));
+                }}
+                style={{ marginRight: 4 }}>
+                <Text style={[s.chip, s.chipAccent]}>Hoje</Text>
+              </TapRow>
+            )}
             <IconBtn name="chevron-back" label="Mês anterior" onPress={() => setBase(addMonths(base, -1))} />
             <IconBtn name="chevron-forward" label="Próximo mês" onPress={() => setBase(addMonths(base, 1))} />
           </View>
@@ -93,11 +104,15 @@ export default function DashboardCalendar({
           {days.map((d) => {
             const key = toKey(d);
             const today = isToday(d);
-            const hasSession = Boolean(sessionsByDate[key]);
+            const count = sessionsByDate[key]?.length ?? 0;
+            const hasSession = count > 0;
             const selected = key === toKey(selectedDate);
 
             return (
               <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`${formatShort(d)}${count ? `, ${count} sessão(ões)` : ', sem sessões'}${today ? ', hoje' : ''}`}
                 key={key}
                 onPress={() => setSelectedDate(d)}
                 style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 2 }}>
@@ -109,7 +124,7 @@ export default function DashboardCalendar({
                     borderRadius: 10,
                     borderWidth: selected ? 2 : 0,
                     borderColor: C.primary,
-                    backgroundColor: today ? C.primary : hasSession ? '#E4F1F1' : 'transparent',
+                    backgroundColor: today ? C.primary : hasSession ? C.secondarySurface : 'transparent',
                   }}>
                   <Text
                     style={{
@@ -156,13 +171,13 @@ export default function DashboardCalendar({
                   <View style={s.avatar}>
                     <Text style={s.avatarText}>{initials(session.patient?.name)}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={[s.row, { gap: 6, flexWrap: 'wrap' }]}>
-                      <Text style={{ fontWeight: '600', color: C.foreground }}>
+                      <Text style={{ fontWeight: '600', color: C.foreground }} numberOfLines={2}>
                         {session.patient?.name ?? 'Paciente'}
                       </Text>
                       {session.session_type === 'extra' ? (
-                        <Text style={[s.chip, { backgroundColor: '#FEF3C7', color: C.amber }]}>Extra</Text>
+                        <Text style={[s.chip, { backgroundColor: C.amberSurface, color: C.amber }]}>Extra</Text>
                       ) : null}
                     </View>
                     <Text style={[s.muted, { fontSize: 12 }]}>{session.time}</Text>
@@ -174,35 +189,38 @@ export default function DashboardCalendar({
                     <Text style={[s.muted, { fontStyle: 'italic' }]}>Cancelada</Text>
                   ) : session.status === 'completed' ? (
                     <>
-                      <Pressable onPress={() => setAbsentTarget(session)}>
+                      <TapRow label="Registrar falta" onPress={() => setAbsentTarget(session)}>
                         <Text style={{ fontSize: 12, color: C.red }}>Registrar falta</Text>
-                      </Pressable>
-                      <Pressable onPress={() => setCancelTarget(session)}>
+                      </TapRow>
+                      <TapRow label="Cancelar sessão" onPress={() => setCancelTarget(session)}>
                         <Text style={[s.muted, { fontSize: 12 }]}>Cancelar sessão</Text>
-                      </Pressable>
+                      </TapRow>
                     </>
                   ) : session.status === 'scheduled' ? (
                     <>
                       {!isSelectedDatePast && meet ? (
-                        <Pressable onPress={() => Linking.openURL(meet)} style={[s.row, { gap: 4 }]}>
+                        <TapRow label="Abrir o Google Meet" onPress={() => Linking.openURL(meet)}>
                           <Ionicons name="videocam-outline" size={14} color={C.secondary} />
                           <Text style={{ fontSize: 12, color: C.secondary, fontWeight: '600' }}>
                             Google Meet
                           </Text>
-                        </Pressable>
+                        </TapRow>
                       ) : !isSelectedDatePast ? (
-                        <Pressable
-                          onPress={() => onEditPatient(session.patient.id)}
-                          style={[s.row, { gap: 4 }]}>
+                        <TapRow
+                          label="Adicionar link do Meet"
+                          onPress={() => onEditPatient(session.patient.id)}>
                           <Ionicons name="videocam-outline" size={14} color={C.amber} />
                           <Text style={{ fontSize: 12, color: C.amber, fontWeight: '600' }}>
                             Adicionar link do Meet
                           </Text>
-                        </Pressable>
+                        </TapRow>
                       ) : null}
-                      <Pressable onPress={() => setCancelTarget(session)}>
+                      <TapRow label="Registrar falta" onPress={() => setAbsentTarget(session)}>
+                        <Text style={{ fontSize: 12, color: C.red }}>Registrar falta</Text>
+                      </TapRow>
+                      <TapRow label="Cancelar sessão" onPress={() => setCancelTarget(session)}>
                         <Text style={[s.muted, { fontSize: 12 }]}>Cancelar sessão</Text>
-                      </Pressable>
+                      </TapRow>
                     </>
                   ) : null}
                 </View>
@@ -219,13 +237,12 @@ export default function DashboardCalendar({
           absentTarget
             ? [
                 ['Paciente', absentTarget.patient?.name ?? '—'],
-                ['Data', absentTarget.date],
+                ['Data', formatShort(parseDate(absentTarget.date))],
                 ['Horário', absentTarget.time],
               ]
             : undefined
         }
-        confirmLabel="Marcar falta"
-        loadingLabel="Marcando falta..."
+        confirmLabel="Sim, marcar falta"
         onClose={() => setAbsentTarget(null)}
         onConfirm={async () => {
           if (absentTarget) await applyStatus(absentTarget.id, 'absent');
@@ -239,14 +256,12 @@ export default function DashboardCalendar({
           cancelTarget
             ? [
                 ['Paciente', cancelTarget.patient?.name ?? '—'],
-                ['Data', cancelTarget.date],
+                ['Data', formatShort(parseDate(cancelTarget.date))],
                 ['Horário', cancelTarget.time],
               ]
             : undefined
         }
-        confirmLabel="Cancelar sessão"
-        loadingLabel="Cancelando..."
-        destructive={false}
+        confirmLabel="Sim, cancelar a sessão"
         onClose={() => setCancelTarget(null)}
         onConfirm={async () => {
           if (cancelTarget) await applyStatus(cancelTarget.id, 'cancelled');

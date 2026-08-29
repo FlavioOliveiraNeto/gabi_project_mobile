@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/dashboard/app-header';
 import ConfirmModal from '@/components/dashboard/confirm-modal';
@@ -7,7 +8,7 @@ import DashboardCalendar from '@/components/dashboard/dashboard-calendar';
 import DashboardStats from '@/components/dashboard/dashboard-stats';
 import PatientFormModal from '@/components/dashboard/patient-form-modal';
 import PatientList from '@/components/dashboard/patient-list';
-import { s } from '@/components/ui';
+import { apiErrorMessage, Btn, ErrorText, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import {
@@ -18,20 +19,15 @@ import {
   type TherapistStats,
 } from '@/services/dashboard';
 
-const EMPTY_STATS: TherapistStats = {
-  active_clients: 0,
-  sessions_today: 0,
-  sessions_this_week: 0,
-  sessions_completed_this_week: 0,
-};
-
 export default function PsychDashboard() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
-  const [stats, setStats] = useState<TherapistStats>(EMPTY_STATS);
+  const [stats, setStats] = useState<TherapistStats | null>(null);
   const [patients, setPatients] = useState<PatientUser[]>([]);
   const [sessions, setSessions] = useState<CalendarSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [formPatient, setFormPatient] = useState<PatientUser | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -44,8 +40,11 @@ export default function PsychDashboard() {
           setStats(response.stats);
           setSessions(response.calendar_sessions ?? []);
           setPatients(response.patients ?? []);
+          setLoadError(null);
         })
-        .catch((error: unknown) => console.error(error))
+        .catch((error: unknown) =>
+          setLoadError(apiErrorMessage(error, 'Não foi possível carregar o painel.')),
+        )
         .finally(() => setIsLoading(false)),
     [],
   );
@@ -68,42 +67,54 @@ export default function PsychDashboard() {
     <View style={s.screen}>
       <AppHeader greeting={`Olá, ${user?.name ?? 'Terapeuta'}!`} />
 
-      <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 16 }}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={C.primary} />
-        }>
-        <DashboardStats stats={stats} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16, gap: 16 }}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={C.primary} />
+          }>
+          {loadError ? (
+            <View style={[s.card, { gap: 12 }]}>
+              <ErrorText marginBottom={0}>{loadError}</ErrorText>
+              <Btn title="Tentar novamente" variant="outline" onPress={refresh} />
+            </View>
+          ) : null}
 
-        <DashboardCalendar
-          sessions={sessions}
-          patients={patients}
-          onReload={loadDashboard}
-          onEditPatient={(id) => {
-            const patient = patients.find((p) => p.id === id);
-            if (patient) openEdit(patient);
-          }}
-        />
+          <DashboardStats stats={stats} sessions={sessions} />
 
-        <PatientList
-          patients={patients}
-          sessions={sessions}
-          isLoading={isLoading}
-          onAdd={() => {
-            setFormPatient(null);
-            setShowForm(true);
-          }}
-          onEdit={openEdit}
-          onDelete={setDeleteTarget}
-          onNoteSaved={(patientId) =>
-            setPatients((prev) =>
-              prev.map((p) =>
-                p.id === patientId ? { ...p, clinical_notes_count: p.clinical_notes_count + 1 } : p,
-              ),
-            )
-          }
-        />
-      </ScrollView>
+          <DashboardCalendar
+            sessions={sessions}
+            patients={patients}
+            onReload={loadDashboard}
+            onEditPatient={(id) => {
+              const patient = patients.find((p) => p.id === id);
+              if (patient) openEdit(patient);
+            }}
+          />
+
+          <PatientList
+            patients={patients}
+            sessions={sessions}
+            isLoading={isLoading}
+            onAdd={() => {
+              setFormPatient(null);
+              setShowForm(true);
+            }}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+            onNoteSaved={(patientId) =>
+              setPatients((prev) =>
+                prev.map((p) =>
+                  p.id === patientId ? { ...p, clinical_notes_count: p.clinical_notes_count + 1 } : p,
+                ),
+              )
+            }
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {showForm ? (
         <PatientFormModal
@@ -121,16 +132,11 @@ export default function PsychDashboard() {
         title="Excluir paciente"
         message={`Tem certeza que deseja excluir ${deleteTarget?.name ?? ''}? Todas as anotações e sessões serão removidas permanentemente.`}
         confirmLabel="Excluir"
-        loadingLabel="Excluindo..."
         onClose={() => setDeleteTarget(null)}
         onConfirm={async () => {
           if (!deleteTarget) return;
-          try {
-            await deletePatient(deleteTarget.id);
-            await loadDashboard();
-          } catch (error) {
-            console.error(error);
-          }
+          await deletePatient(deleteTarget.id);
+          await loadDashboard();
         }}
       />
     </View>

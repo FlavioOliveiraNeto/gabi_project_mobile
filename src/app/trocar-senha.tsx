@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import { Btn, Field, apiErrorMessage, s } from '@/components/ui';
+import { Btn, ErrorText, Field, apiErrorMessage, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { forcedChangePasswordRequest } from '@/services/auth';
@@ -105,7 +105,7 @@ export default function ChangePasswordScreen() {
                 placeholder="Repita a senha"
               />
 
-              {error ? <Text style={[s.error, { marginBottom: 14 }]}>{error}</Text> : null}
+              <ErrorText>{error}</ErrorText>
 
               <Btn title="Definir nova senha" loading={isLoading} onPress={handleChangePassword} />
             </>

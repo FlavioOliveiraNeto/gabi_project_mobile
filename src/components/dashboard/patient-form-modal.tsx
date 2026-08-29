@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Btn, Field, Sheet, apiErrorMessage, s } from '@/components/ui';
+import { Btn, ErrorText, Field, Sheet, apiErrorMessage, s } from '@/components/ui';
 import { C } from '@/constants/theme';
-import { fromIsoDate, isValidTime, maskDate, maskTime, toIsoDate } from '@/lib/date';
+import { fromIsoDate, isValidTime, maskDate, maskTime, scheduleError, toIsoDate } from '@/lib/date';
 import {
   createPatient,
   updatePatient,
@@ -45,7 +46,12 @@ function Chip({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      hitSlop={{ top: 10, bottom: 10 }}
+      onPress={onPress}>
       <Text style={[s.chip, active ? s.chipAccent : null, { paddingVertical: 6, paddingHorizontal: 12 }]}>
         {label}
       </Text>
@@ -94,9 +100,10 @@ export default function PatientFormModal({
   const editingSessionId = patientToEdit?.extra_sessions?.[0]?.id ?? null;
 
   const [form, setForm] = useState(() => initialForm(patientToEdit));
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; schedule?: string }>({});
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [generatedPassword, setGeneratedPassword] = useState('');
 
@@ -108,6 +115,10 @@ export default function PatientFormModal({
     if (!form.name.trim()) next.name = 'Nome é obrigatório.';
     if (!form.email.trim()) next.email = 'E-mail é obrigatório.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = 'E-mail inválido.';
+
+    next.schedule = scheduleError(form);
+    if (!next.schedule) delete next.schedule;
+
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -210,8 +221,8 @@ export default function PatientFormModal({
         <View
           style={{
             borderWidth: 1,
-            borderColor: '#FCD34D',
-            backgroundColor: '#FFFBEB',
+            borderColor: C.amberBorder,
+            backgroundColor: C.amberSurfaceSoft,
             borderRadius: 12,
             padding: 14,
             marginBottom: 14,
@@ -219,7 +230,7 @@ export default function PatientFormModal({
           <Text style={{ fontSize: 11, fontWeight: '700', color: C.amber, marginBottom: 6 }}>
             SENHA TEMPORÁRIA
           </Text>
-          <Text selectable style={{ fontSize: 20, fontWeight: '700', letterSpacing: 2, color: '#78350F' }}>
+          <Text selectable style={{ fontSize: 20, fontWeight: '700', letterSpacing: 2, color: C.amberInk }}>
             {generatedPassword}
           </Text>
         </View>
@@ -228,7 +239,16 @@ export default function PatientFormModal({
           O paciente será obrigado a trocar esta senha no primeiro login.
         </Text>
 
-        <Btn title="Entendi, fechar" onPress={onClose} />
+        <View style={{ gap: 10 }}>
+          <Btn
+            title={copied ? 'Senha copiada' : 'Copiar senha'}
+            onPress={async () => {
+              await Clipboard.setStringAsync(generatedPassword);
+              setCopied(true);
+            }}
+          />
+          <Btn title="Entendi, fechar" variant="outline" onPress={onClose} />
+        </View>
       </Sheet>
     );
   }
@@ -242,6 +262,7 @@ export default function PatientFormModal({
       <ScrollView>
         <Field
           label="Nome completo *"
+          maxLength={120}
           value={form.name}
           onChangeText={(v) => set('name', v)}
           error={errors.name}
@@ -249,6 +270,7 @@ export default function PatientFormModal({
         />
         <Field
           label="E-mail *"
+          maxLength={160}
           value={form.email}
           onChangeText={(v) => set('email', v)}
           error={errors.email}
@@ -258,6 +280,7 @@ export default function PatientFormModal({
         />
         <Field
           label="Link do Google Meet"
+          maxLength={300}
           value={form.google_meet_link}
           onChangeText={(v) => set('google_meet_link', v)}
           autoCapitalize="none"
@@ -346,9 +369,10 @@ export default function PatientFormModal({
           </>
         )}
 
-        {formError ? <Text style={[s.error, { marginBottom: 14 }]}>{formError}</Text> : null}
+        <ErrorText>{errors.schedule}</ErrorText>
+        <ErrorText>{formError}</ErrorText>
 
-        <View style={[s.row, { gap: 12, paddingBottom: 8 }]}>
+        <View style={[s.actions, { paddingBottom: 8 }]}>
           <Btn title="Cancelar" variant="outline" onPress={onClose} style={{ flex: 1 }} />
           <Btn
             title={isEditing ? 'Salvar alterações' : 'Cadastrar paciente'}

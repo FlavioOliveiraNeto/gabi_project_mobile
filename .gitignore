@@ -43,4 +43,6 @@ example
 /android
 
 .env*
-AGENTS
+.claude
+.impeccable
+/docs

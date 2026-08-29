@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Btn, Sheet, s } from '@/components/ui';
+import { apiErrorMessage, Btn, ErrorText, Sheet, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 
 export default function ConfirmModal({
@@ -10,7 +10,6 @@ export default function ConfirmModal({
   message,
   details,
   confirmLabel,
-  loadingLabel,
   destructive = true,
   onClose,
   onConfirm,
@@ -20,24 +19,29 @@ export default function ConfirmModal({
   message: string;
   details?: [string, string][];
   confirmLabel: string;
-  loadingLabel: string;
   destructive?: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function close() {
-    if (!isLoading) onClose();
+    if (isLoading) return;
+    setError(null);
+    onClose();
   }
 
   async function handleConfirm() {
     setIsLoading(true);
+    setError(null);
     try {
       await onConfirm();
+      onClose();
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Não foi possível concluir. Tente novamente.'));
     } finally {
       setIsLoading(false);
-      onClose();
     }
   }
 
@@ -56,10 +60,12 @@ export default function ConfirmModal({
         </View>
       ) : null}
 
-      <View style={[s.row, { gap: 12 }]}>
+      <ErrorText>{error}</ErrorText>
+
+      <View style={s.actions}>
         <Btn title="Voltar" variant="outline" onPress={close} style={{ flex: 1 }} />
         <Btn
-          title={isLoading ? loadingLabel : confirmLabel}
+          title={confirmLabel}
           loading={isLoading}
           variant={destructive ? 'destructive' : 'primary'}
           onPress={handleConfirm}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { Btn, Field, Sheet, apiErrorMessage, initials, s } from '@/components/ui';
+import { Btn, ErrorText, Field, Sheet, apiErrorMessage, initials, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { formatDayMonth, isValidTime, maskTime, scheduledAt } from '@/lib/date';
 import { createSession, type CalendarSession, type PatientUser } from '@/services/dashboard';
@@ -78,6 +78,9 @@ export default function AddSessionModal({
             return (
               <Pressable
                 key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={p.name}
+                accessibilityState={{ selected }}
                 onPress={() => setSelectedPatientId(p.id)}
                 style={[
                   s.row,
@@ -85,13 +88,15 @@ export default function AddSessionModal({
                     gap: 10,
                     padding: 8,
                     borderRadius: 10,
-                    backgroundColor: selected ? '#EDE9F7' : 'transparent',
+                    backgroundColor: selected ? C.primarySurface : 'transparent',
                   },
                 ]}>
                 <View style={[s.avatar, { width: 32, height: 32, borderRadius: 16 }]}>
                   <Text style={s.avatarText}>{initials(p.name)}</Text>
                 </View>
-                <Text style={{ color: C.foreground }}>{p.name}</Text>
+                <Text style={{ color: C.foreground, flex: 1 }} numberOfLines={1}>
+                  {p.name}
+                </Text>
               </Pressable>
             );
           })
@@ -106,9 +111,9 @@ export default function AddSessionModal({
         placeholder="14:30"
       />
 
-      {errorMessage ? <Text style={[s.error, { marginBottom: 14 }]}>{errorMessage}</Text> : null}
+      <ErrorText>{errorMessage}</ErrorText>
 
-      <View style={[s.row, { gap: 12 }]}>
+      <View style={s.actions}>
         <Btn title="Cancelar" variant="outline" onPress={onClose} style={{ flex: 1 }} />
         <Btn
           title="Criar sessão"

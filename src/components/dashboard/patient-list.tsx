@@ -64,7 +64,7 @@ export default function PatientList({
         style={s.input}
       />
 
-      {isLoading ? (
+      {isLoading && patients.length === 0 ? (
         <Text style={[s.muted, { textAlign: 'center', paddingVertical: 20 }]}>
           Carregando pacientes...
         </Text>

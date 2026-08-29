@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Btn, Field, IconBtn, apiErrorMessage, s } from '@/components/ui';
+import { Btn, ErrorText, Field, IconBtn, apiErrorMessage, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { homeRoute, useAuth } from '@/lib/auth';
 import { requestPasswordReset } from '@/services/auth';
@@ -79,7 +79,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   placeholder="seu@email.com"
                 />
-                {forgotError ? <Text style={[s.error, { marginBottom: 12 }]}>{forgotError}</Text> : null}
+                <ErrorText marginBottom={12}>{forgotError}</ErrorText>
                 <Btn
                   title="Enviar link de recuperação"
                   loading={forgotLoading}
@@ -92,7 +92,7 @@ export default function LoginScreen() {
             )
           ) : (
             <View>
-              {error ? <Text style={[s.error, { marginBottom: 14 }]}>{error}</Text> : null}
+              <ErrorText>{error}</ErrorText>
 
               <Field
                 label="E-mail"

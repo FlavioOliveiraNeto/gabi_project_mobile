@@ -9,13 +9,21 @@ export const C = {
   border: "#E3DFEC",
   primary: "#7C6BB0",
   primaryForeground: "#FFFFFF",
+  primarySurface: "#EDE9F7",
   secondary: "#5B9E9E",
+  secondarySurface: "#E4F1F1",
   destructive: "#D14343",
   destructiveForeground: "#FFFFFF",
+  destructiveSurface: "#FDECEC",
   amber: "#D97706",
+  amberSurface: "#FEF3C7",
+  amberSurfaceSoft: "#FFFBEB",
+  amberBorder: "#FCD34D",
+  amberInk: "#78350F",
   green: "#16A34A",
   red: "#EF4444",
   yellow: "#EAB308",
+  scrim: "rgba(0,0,0,0.4)",
 } as const;
 
 export const Fonts = Platform.select({

@@ -40,6 +40,9 @@ export const formatMonthYear = (d: Date) =>
 export const startOfDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate());
 export const isToday = (d: Date) => toKey(d) === toKey(new Date());
+
+export const isSameMonth = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 export const addMonths = (d: Date, n: number) =>
   new Date(d.getFullYear(), d.getMonth() + n, 1);
 
@@ -86,3 +89,48 @@ export const fromIsoDate = (iso: string): string => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
 };
+
+export function hasStarted(
+  date: string,
+  time: string,
+  now: Date = new Date(),
+): boolean {
+  const clock = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return `${date} ${time}` <= `${toKey(now)} ${clock}`;
+}
+
+export type ScheduleDraft = {
+  schedule_type: "regular" | "extra";
+  sessions_per_week: number;
+  weekdays: string[];
+  session_time: string;
+  single_date: string;
+  single_time: string;
+};
+
+export function scheduleError(form: ScheduleDraft): string | undefined {
+  if (form.schedule_type === "regular") {
+    const started =
+      form.sessions_per_week > 0 ||
+      form.weekdays.length > 0 ||
+      !!form.session_time;
+    if (!started) return undefined;
+
+    if (form.sessions_per_week < 1)
+      return "Escolha quantas sessões por semana.";
+    if (form.weekdays.length < form.sessions_per_week)
+      return `Selecione ${form.sessions_per_week} dia(s) para ${form.sessions_per_week} sessão(ões) por semana.`;
+    if (form.weekdays.length > form.sessions_per_week)
+      return `Você marcou ${form.weekdays.length} dias para ${form.sessions_per_week} sessão(ões) por semana.`;
+    if (!isValidTime(form.session_time))
+      return "Informe um horário válido (HH:MM).";
+    return undefined;
+  }
+
+  if (!form.single_date && !form.single_time) return undefined;
+  if (!toIsoDate(form.single_date))
+    return "Informe uma data válida (DD/MM/AAAA).";
+  if (!isValidTime(form.single_time))
+    return "Informe um horário válido (HH:MM).";
+  return undefined;
+}

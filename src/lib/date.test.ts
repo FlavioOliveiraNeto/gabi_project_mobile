@@ -11,6 +11,9 @@ import {
   scheduledAt,
   toIsoDate,
   toKey,
+  hasStarted,
+  scheduleError,
+  type ScheduleDraft,
 } from "./date.ts";
 
 assert.equal(toKey(parseDate("2026-08-25")), "2026-08-25");
@@ -40,5 +43,91 @@ assert.equal(grid.offset, 6);
 assert.equal(grid.days.length, 31);
 
 assert.equal(formatMonthYear(parseDate("2026-08-01")), "Agosto de 2026");
+
+const noon = new Date(2026, 7, 25, 12, 0);
+assert.equal(hasStarted("2026-08-25", "11:59", noon), true);
+assert.equal(hasStarted("2026-08-25", "12:00", noon), true);
+assert.equal(hasStarted("2026-08-25", "12:01", noon), false);
+assert.equal(hasStarted("2026-08-24", "23:59", noon), true);
+assert.equal(hasStarted("2026-11-18", "09:00", noon), false);
+
+const draft: ScheduleDraft = {
+  schedule_type: "regular",
+  sessions_per_week: 0,
+  weekdays: [],
+  session_time: "",
+  single_date: "",
+  single_time: "",
+};
+
+assert.equal(scheduleError(draft), undefined);
+
+assert.match(
+  scheduleError({
+    ...draft,
+    sessions_per_week: 3,
+    weekdays: ["monday"],
+    session_time: "14:30",
+  })!,
+  /Selecione 3 dia/,
+);
+assert.match(
+  scheduleError({
+    ...draft,
+    sessions_per_week: 1,
+    weekdays: ["monday", "friday"],
+    session_time: "14:30",
+  })!,
+  /marcou 2 dias/,
+);
+assert.equal(
+  scheduleError({
+    ...draft,
+    sessions_per_week: 2,
+    weekdays: ["monday", "friday"],
+    session_time: "14:30",
+  }),
+  undefined,
+);
+assert.match(
+  scheduleError({ ...draft, weekdays: ["monday"] })!,
+  /quantas sessões/,
+);
+assert.match(
+  scheduleError({
+    ...draft,
+    sessions_per_week: 1,
+    weekdays: ["monday"],
+    session_time: "99:99",
+  })!,
+  /horário válido/,
+);
+
+assert.equal(scheduleError({ ...draft, schedule_type: "extra" }), undefined);
+assert.match(
+  scheduleError({
+    ...draft,
+    schedule_type: "extra",
+    single_date: "31/02/2026",
+  })!,
+  /data válida/,
+);
+assert.match(
+  scheduleError({
+    ...draft,
+    schedule_type: "extra",
+    single_date: "25/08/2026",
+  })!,
+  /horário válido/,
+);
+assert.equal(
+  scheduleError({
+    ...draft,
+    schedule_type: "extra",
+    single_date: "25/08/2026",
+    single_time: "14:30",
+  }),
+  undefined,
+);
 
 console.log("date.ts OK");

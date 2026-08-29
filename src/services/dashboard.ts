@@ -173,11 +173,16 @@ export async function deletePatient(id: number): Promise<void> {
   await api.delete(`/therapists/patients/${id}`);
 }
 
+export const NOTES_PAGE_SIZE = 20;
+
 export async function getClinicalNotes(
   patientId: number,
+  offset = 0,
+  limit: number = NOTES_PAGE_SIZE,
 ): Promise<ClinicalNote[]> {
   const { data } = await api.get<ClinicalNote[]>(
     `/therapists/patients/${patientId}/notes`,
+    { params: { offset, limit } },
   );
   return data;
 }

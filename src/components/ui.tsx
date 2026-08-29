@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -28,6 +30,7 @@ export const s = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '500', color: C.foreground, marginBottom: 6 },
   muted: { fontSize: 13, color: C.mutedForeground },
   row: { flexDirection: 'row', alignItems: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   input: {
     borderWidth: 1,
     borderColor: C.border,
@@ -42,7 +45,7 @@ export const s = StyleSheet.create({
     fontSize: 13,
     color: C.destructive,
     textAlign: 'center',
-    backgroundColor: '#FDECEC',
+    backgroundColor: C.destructiveSurface,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -51,7 +54,7 @@ export const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EDE9F7',
+    backgroundColor: C.primarySurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -65,8 +68,23 @@ export const s = StyleSheet.create({
     backgroundColor: C.muted,
     color: C.mutedForeground,
   },
-  chipAccent: { backgroundColor: '#E4F1F1', color: C.secondary, fontWeight: '600' },
+  chipAccent: { backgroundColor: C.secondarySurface, color: C.secondary, fontWeight: '600' },
 });
+
+export function ErrorText({
+  children,
+  marginBottom = 14,
+}: {
+  children?: string | null;
+  marginBottom?: number;
+}) {
+  if (!children) return null;
+  return (
+    <Text accessibilityLiveRegion="polite" role="alert" style={[s.error, { marginBottom }]}>
+      {children}
+    </Text>
+  );
+}
 
 export function Field({
   label,
@@ -107,12 +125,15 @@ export function Btn({
   const off = disabled || loading;
   const bg =
     variant === 'primary' ? C.primary : variant === 'destructive' ? C.destructive : 'transparent';
-  const fg = variant === 'outline' ? C.foreground : '#FFFFFF';
+  const fg = variant === 'outline' ? C.foreground : C.primaryForeground;
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: off, busy: Boolean(loading) }}
       disabled={off}
+      hitSlop={{ top: 4, bottom: 4 }}
       onPress={onPress}
       style={[
         {
@@ -160,6 +181,29 @@ export function IconBtn({
   );
 }
 
+export function TapRow({
+  onPress,
+  label,
+  children,
+  style,
+}: {
+  onPress: () => void;
+  label: string;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+      style={[s.row, { gap: 4, paddingVertical: 4 }, style]}>
+      {children}
+    </Pressable>
+  );
+}
+
 export function Sheet({
   visible,
   onClose,
@@ -171,38 +215,51 @@ export function Sheet({
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          justifyContent: 'center',
-          padding: 16,
-        }}>
-        {/* Pressable interno evita que o toque no conteúdo feche o modal. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}>
         <Pressable
-          onPress={() => {}}
-          style={{ backgroundColor: C.card, borderRadius: 18, padding: 20, maxHeight: '85%' }}>
-          {children}
+          onPress={onClose}
+          style={{
+            flex: 1,
+            backgroundColor: C.scrim,
+            justifyContent: 'center',
+            padding: 16,
+          }}>
+          {/* Pressable interno evita que o toque no conteúdo feche o modal. */}
+          <Pressable
+            onPress={() => {}}
+            style={{ backgroundColor: C.card, borderRadius: 18, padding: 20, maxHeight: '85%' }}>
+            {children}
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 export function initials(name?: string): string {
   if (!name) return '?';
-  return name
+  const letters = name
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('');
+  return letters || '?';
 }
 
 export function apiErrorMessage(err: unknown, fallback: string): string {
-  const data = (err as { response?: { data?: { errors?: unknown; error?: unknown } } })?.response?.data;
+  const e = err as {
+    response?: { status?: number; data?: { errors?: unknown; error?: unknown } };
+  };
+  const data = e?.response?.data;
   if (Array.isArray(data?.errors)) return data.errors.join(', ');
   if (typeof data?.error === 'string') return data.error;
+  if (!e?.response) return 'Sem conexão com o servidor. Verifique a internet e tente de novo.';
+  if (e.response.status === 403) return 'Você não tem permissão para esta ação.';
+  if (e.response.status === 404) return 'Registro não encontrado. Atualize a tela.';
+  if (e.response.status === 429) return 'Muitas tentativas. Aguarde um minuto e tente de novo.';
+  if ((e.response.status ?? 0) >= 500) return 'O servidor falhou. Tente novamente em instantes.';
   return fallback;
 }

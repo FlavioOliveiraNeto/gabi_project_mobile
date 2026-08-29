@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Btn, Field, Sheet, apiErrorMessage, s } from '@/components/ui';
+import { Btn, ErrorText, Field, Sheet, apiErrorMessage, s } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { changePasswordRequest } from '@/services/auth';
 
@@ -76,9 +76,9 @@ export default function ChangePasswordModal({
         secureTextEntry
       />
 
-      {error ? <Text style={[s.error, { marginBottom: 14 }]}>{error}</Text> : null}
+      <ErrorText>{error}</ErrorText>
 
-      <View style={[s.row, { gap: 12 }]}>
+      <View style={s.actions}>
         <Btn title="Cancelar" variant="outline" onPress={close} style={{ flex: 1 }} />
         <Btn title="Trocar senha" loading={isLoading} onPress={handleSubmit} style={{ flex: 1 }} />
       </View>

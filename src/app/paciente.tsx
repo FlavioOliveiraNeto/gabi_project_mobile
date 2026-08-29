@@ -3,16 +3,16 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
-  Pressable,
   RefreshControl,
   ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/dashboard/app-header';
-import { Btn, IconBtn, s } from '@/components/ui';
+import { apiErrorMessage, Btn, ErrorText, IconBtn, TapRow, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { formatLong, formatShort, isToday, parseDate } from '@/lib/date';
 import {
@@ -45,9 +45,11 @@ function StatCard({
 }
 
 export default function PatientDashboard() {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState<ClientDashboardData | null>(null);
   const [notes, setNotes] = useState<PatientNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(
     () =>
@@ -55,8 +57,11 @@ export default function PatientDashboard() {
         .then((dash) => {
           setData(dash);
           setNotes(dash.notes);
+          setLoadError(null);
         })
-        .catch((error: unknown) => console.error(error))
+        .catch((error: unknown) =>
+          setLoadError(apiErrorMessage(error, 'Não foi possível carregar seus dados.')),
+        )
         .finally(() => setIsLoading(false)),
     [],
   );
@@ -120,8 +125,15 @@ export default function PatientDashboard() {
         <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: 16, gap: 16 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16, gap: 16 }}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={C.primary} />}>
+          {loadError ? (
+            <View style={[s.card, { gap: 12 }]}>
+              <ErrorText marginBottom={0}>{loadError}</ErrorText>
+              <Btn title="Tentar novamente" variant="outline" onPress={refresh} />
+            </View>
+          ) : null}
+
           <View style={[s.row, { gap: 12, flexWrap: 'wrap', alignItems: 'stretch' }]}>
             <StatCard icon="calendar-outline" label="Próxima Sessão">
               {next ? (
@@ -173,12 +185,13 @@ export default function PatientDashboard() {
             )}
 
             {canJoinSession ? (
-              <Pressable
+              <TapRow
+                label="Entrar na sessão"
                 onPress={() => Linking.openURL(meetLink!)}
-                style={[s.row, { gap: 8, alignSelf: 'flex-start' }]}>
+                style={{ gap: 8, alignSelf: 'flex-start' }}>
                 <Ionicons name="videocam-outline" size={16} color={C.secondary} />
                 <Text style={{ color: C.secondary, fontWeight: '600' }}>Entrar na sessão</Text>
-              </Pressable>
+              </TapRow>
             ) : next && !meetLink ? (
               <Text style={[s.muted, { fontStyle: 'italic' }]}>Link do Google Meet não configurado.</Text>
             ) : null}

@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import { Btn, Field, apiErrorMessage, s } from '@/components/ui';
+import { Btn, ErrorText, Field, apiErrorMessage, s } from '@/components/ui';
 import { confirmPasswordReset } from '@/services/auth';
 
 import { SuccessPanel, useLoginCountdown } from './trocar-senha';
@@ -87,7 +87,7 @@ export default function ResetPasswordScreen() {
                 placeholder="Repita a senha"
               />
 
-              {error ? <Text style={[s.error, { marginBottom: 14 }]}>{error}</Text> : null}
+              <ErrorText>{error}</ErrorText>
 
               <Btn title="Definir nova senha" loading={isLoading} onPress={handleReset} />
             </>
