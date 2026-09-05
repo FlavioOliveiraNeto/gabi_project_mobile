@@ -37,7 +37,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "start:lan": "bash scripts/start-lan.sh",
-    "test": "node --experimental-strip-types src/lib/date.test.ts"
+    "test": "node --experimental-strip-types src/lib/date.test.ts",
+    "build:web": "expo export -p web && node scripts/fix-vercel-assets.mjs",
+    "deploy:web": "npm run build:web && vercel deploy --prod dist"
   },
   "private": true
 }
