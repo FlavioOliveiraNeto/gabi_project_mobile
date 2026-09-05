@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "gabi_project_mobile",
+    "name": "Gabi",
     "slug": "gabi_project_mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,7 +18,16 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "name": "Gabi",
+      "shortName": "Gabi",
+      "lang": "pt-BR",
+      "themeColor": "#FFFFFF",
+      "backgroundColor": "#F6F4FB",
+      "display": "standalone",
+      "orientation": "portrait",
+      "description": "Agenda, sessões e anotações clínicas."
     },
     "plugins": [
       "expo-router",
