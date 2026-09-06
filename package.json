@@ -39,7 +39,7 @@
     "start:lan": "bash scripts/start-lan.sh",
     "test": "node --experimental-strip-types src/lib/date.test.ts",
     "build:web": "expo export -p web && node scripts/fix-vercel-assets.mjs",
-    "deploy:web": "npm run build:web && vercel deploy --prod dist"
+    "deploy:web": "vercel deploy --prod"
   },
   "private": true
 }
