@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import api from "./api";
 
 export interface ClinicalNote {
@@ -332,18 +333,28 @@ export function conflictSlots(err: unknown): ScheduleConflict[] {
   return Array.isArray(data?.conflicts) ? data.conflicts : [];
 }
 
-export async function transcribeAudio(uri: string, signal?: AbortSignal): Promise<string> {
+export async function transcribeAudio(
+  uri: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const form = new FormData();
-  form.append("audio", {
-    uri,
-    name: "nota.m4a",
-    type: "audio/m4a",
-  } as unknown as Blob);
+
+  if (Platform.OS === "web") {
+    const blob = await fetch(uri).then((r) => r.blob());
+    const type = blob.type.split(";")[0] || "audio/webm";
+    form.append("audio", blob, `nota.${type.split("/")[1] ?? "webm"}`);
+  } else {
+    form.append("audio", {
+      uri,
+      name: "nota.m4a",
+      type: "audio/m4a",
+    } as unknown as Blob);
+  }
 
   const { data } = await api.post<{ text: string }>(
     "/therapists/transcription",
     form,
-    { headers: { "Content-Type": "multipart/form-data" }, timeout: 120000, signal },
+    { timeout: 120000, signal },
   );
 
   return data.text;

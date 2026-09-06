@@ -14,7 +14,7 @@ export const API_BASE_URL =
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  headers: { Accept: "application/json" },
   withCredentials: true,
 });
 

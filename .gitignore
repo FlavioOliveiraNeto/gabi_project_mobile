@@ -45,4 +45,5 @@ example
 .env*
 .claude
 .impeccable
-/docs
+/docs.vercel
+/docs*

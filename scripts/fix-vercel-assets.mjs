@@ -20,3 +20,12 @@ for (const file of fs.globSync(`${dir}/**/*.{js,html,json,css,map}`)) {
   touched++;
 }
 console.log(`${FROM} -> ${TO} (${touched} arquivo(s) reescrito(s))`);
+
+const link = '.vercel/project.json';
+if (fs.existsSync(link)) {
+  fs.mkdirSync(path.join(dir, '.vercel'), { recursive: true });
+  fs.copyFileSync(link, path.join(dir, '.vercel/project.json'));
+  console.log(`vínculo restaurado: ${JSON.parse(fs.readFileSync(link, 'utf8')).projectName}`);
+} else {
+  console.warn('AVISO: .vercel/project.json ausente — rode `npx vercel link --project gabi-project-mobile --yes`');
+}
