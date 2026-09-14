@@ -105,6 +105,7 @@ export default function PsychDashboard() {
             }}
             onEdit={openEdit}
             onDelete={setDeleteTarget}
+            onReload={loadDashboard}
             onNoteSaved={(patientId) =>
               setPatients((prev) =>
                 prev.map((p) =>

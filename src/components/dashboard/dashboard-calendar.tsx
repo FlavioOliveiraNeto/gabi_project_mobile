@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { IconBtn, TapRow, initials, s } from '@/components/ui';
+import { ErrorText, IconBtn, TapRow, apiErrorMessage, initials, s } from '@/components/ui';
 import { C } from '@/constants/theme';
 import {
   addMonths,
@@ -16,7 +16,12 @@ import {
   startOfDay,
   toKey,
 } from '@/lib/date';
-import { updateSessionStatus, type CalendarSession, type PatientUser } from '@/services/dashboard';
+import {
+  markSessionsPaid,
+  updateSessionStatus,
+  type CalendarSession,
+  type PatientUser,
+} from '@/services/dashboard';
 
 import AddSessionModal from './add-session-modal';
 import ConfirmModal from './confirm-modal';
@@ -46,6 +51,7 @@ export default function DashboardCalendar({
   const [showAddSession, setShowAddSession] = useState(false);
   const [absentTarget, setAbsentTarget] = useState<CalendarSession | null>(null);
   const [cancelTarget, setCancelTarget] = useState<CalendarSession | null>(null);
+  const [payError, setPayError] = useState('');
 
   const sessionsByDate = useMemo(() => {
     const map: Record<string, CalendarSession[]> = {};
@@ -58,6 +64,16 @@ export default function DashboardCalendar({
   const { offset, days } = useMemo(() => monthGrid(base), [base]);
   const daySessions = sessionsByDate[toKey(selectedDate)] ?? [];
   const isSelectedDatePast = startOfDay(selectedDate) < startOfDay(new Date());
+
+  async function togglePaid(session: CalendarSession) {
+    setPayError('');
+    try {
+      await markSessionsPaid([session.id], !session.paid);
+      onReload();
+    } catch (err) {
+      setPayError(apiErrorMessage(err, 'Não foi possível atualizar o pagamento.'));
+    }
+  }
 
   async function applyStatus(sessionId: number, status: 'absent' | 'cancelled') {
     await updateSessionStatus(sessionId, status);
@@ -153,6 +169,8 @@ export default function DashboardCalendar({
           />
         </View>
 
+        <ErrorText marginBottom={0}>{payError}</ErrorText>
+
         {daySessions.length === 0 ? (
           <Text style={[s.muted, { textAlign: 'center', paddingVertical: 16 }]}>
             Nenhum atendimento neste dia.
@@ -185,6 +203,29 @@ export default function DashboardCalendar({
                 </View>
 
                 <View style={[s.row, { gap: 16, flexWrap: 'wrap' }]}>
+                  {session.status !== 'cancelled' ? (
+                    <TapRow
+                      label={
+                        session.paid
+                          ? `Desmarcar pagamento da sessão de ${session.patient?.name ?? 'paciente'}`
+                          : `Marcar como paga a sessão de ${session.patient?.name ?? 'paciente'}`
+                      }
+                      onPress={() => togglePaid(session)}>
+                      <Ionicons
+                        name={session.paid ? 'checkmark-circle' : 'cash-outline'}
+                        size={14}
+                        color={session.paid ? C.green : C.amber}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: session.paid ? C.green : C.amber,
+                        }}>
+                        {session.paid ? 'Pago' : 'Marcar pago'}
+                      </Text>
+                    </TapRow>
+                  ) : null}
                   {session.status === 'cancelled' ? (
                     <Text style={[s.muted, { fontStyle: 'italic' }]}>Cancelada</Text>
                   ) : session.status === 'completed' ? (

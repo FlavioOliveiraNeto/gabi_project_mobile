@@ -1,7 +1,7 @@
 {
   "name": "Gabi",
   "short_name": "Gabi",
-  "description": "Agenda, sessões e anotações clínicas.",
+  "description": "Agenda, sessões e ficha de evolução.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

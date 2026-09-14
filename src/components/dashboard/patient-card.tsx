@@ -28,6 +28,7 @@ import {
 
 import ConfirmModal from './confirm-modal';
 import DictateButton from './dictate-button';
+import SessionPaymentsSheet, { payableSessions } from './session-payments-sheet';
 
 const WEEKDAY_LABELS: Record<string, string> = {
   sunday: 'Dom',
@@ -399,8 +400,8 @@ function ClinicalNotes({
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12, gap: 10 }}>
       <View>
-        <Text style={s.title}>Anotações clínicas</Text>
-        <Text style={[s.muted, { fontSize: 12 }]}>Visíveis apenas para você.</Text>
+        <Text style={s.title}>Ficha de evolução</Text>
+        <Text style={[s.muted, { fontSize: 12 }]}>Visível apenas para você.</Text>
       </View>
 
       {sortedSessions.length === 0 ? (
@@ -585,6 +586,7 @@ export default function PatientCard({
   onEdit,
   onDelete,
   onNoteSaved,
+  onReload,
 }: {
   patient: PatientUser;
   sessions: CalendarSession[];
@@ -593,9 +595,14 @@ export default function PatientCard({
   onEdit: () => void;
   onDelete: () => void;
   onNoteSaved: (patientId: number) => void;
+  onReload: () => void;
 }) {
   const extras = patient.extra_sessions ?? [];
   const [draft, setDraft] = useState('');
+  const [showPayments, setShowPayments] = useState(false);
+
+  const payable = payableSessions(sessions);
+  const unpaid = payable.filter((x) => !x.paid).length;
 
   return (
     <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 12, gap: 10 }}>
@@ -702,7 +709,31 @@ export default function PatientCard({
         ) : (
           <Text style={[s.muted, { fontSize: 12, fontStyle: 'italic' }]}>Sem link de Meet</Text>
         )}
+        {payable.length > 0 ? (
+          <TapRow
+            label={`Pagamentos de ${patient.name}`}
+            onPress={() => setShowPayments(true)}>
+            <Ionicons
+              name={unpaid > 0 ? 'cash-outline' : 'checkmark-circle'}
+              size={14}
+              color={unpaid > 0 ? C.amber : C.green}
+            />
+            <Text
+              style={{ fontSize: 12, fontWeight: '600', color: unpaid > 0 ? C.amber : C.green }}>
+              {unpaid > 0 ? `${unpaid} a receber` : 'Tudo pago'}
+            </Text>
+          </TapRow>
+        ) : null}
       </View>
+
+      {showPayments ? (
+        <SessionPaymentsSheet
+          patientName={patient.name}
+          sessions={sessions}
+          onClose={() => setShowPayments(false)}
+          onSaved={onReload}
+        />
+      ) : null}
 
       {draft.trim() && !isOpen ? (
         <Text style={{ fontSize: 12, color: C.amber }}>Rascunho de anotação não salvo.</Text>

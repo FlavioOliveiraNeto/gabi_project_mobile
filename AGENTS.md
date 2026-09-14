@@ -1,7 +1,7 @@
-# Expo SDK 54
+# Expo SDK 57
 
-Documentação da versão: https://docs.expo.dev/versions/v54.0.0/
+Documentação da versão: https://docs.expo.dev/versions/v57.0.0/
 
-O projeto está fixado no SDK 54 (e não no mais recente) por um motivo:
-o Expo Go publicado na App Store parou na versão 54, então SDK 55+ exigiria um
-development build (conta paga da Apple) para testar em iPhone físico.
+O projeto acompanha a versão do Expo Go publicada na App Store — hoje SDK 57 —
+para que dê para testar em iPhone físico sem development build (conta paga da
+Apple). Só suba de SDK quando o Expo Go da loja subir junto.

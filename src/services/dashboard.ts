@@ -138,6 +138,7 @@ export interface CalendarSession {
   time: string;
   status: "scheduled" | "completed" | "absent" | "cancelled";
   session_type: "regular" | "extra";
+  paid: boolean;
   patient: {
     id: number;
     name: string;
@@ -253,6 +254,14 @@ export async function updateSessionStatus(
     { status },
   );
   return data;
+}
+
+/** Marca (ou desmarca) o pagamento de uma ou de várias sessões de uma vez. */
+export async function markSessionsPaid(
+  ids: number[],
+  paid: boolean,
+): Promise<void> {
+  await api.patch("/therapists/sessions/mark_paid", { ids, paid });
 }
 
 export async function createSession(

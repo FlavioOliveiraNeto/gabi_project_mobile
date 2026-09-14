@@ -27,7 +27,7 @@
       "backgroundColor": "#F6F4FB",
       "display": "standalone",
       "orientation": "portrait",
-      "description": "Agenda, sessões e anotações clínicas."
+      "description": "Agenda, sessões e ficha de evolução."
     },
     "plugins": [
       "expo-router",
@@ -42,9 +42,11 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "O Gabi usa o microfone para transcrever suas anotações clínicas."
+          "microphonePermission": "O Gabi usa o microfone para transcrever suas ficha de evolução."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

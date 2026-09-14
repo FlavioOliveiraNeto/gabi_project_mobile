@@ -18,6 +18,7 @@ export default function PatientList({
   onEdit,
   onDelete,
   onNoteSaved,
+  onReload,
 }: {
   patients: PatientUser[];
   sessions: CalendarSession[];
@@ -26,6 +27,7 @@ export default function PatientList({
   onEdit: (patient: PatientUser) => void;
   onDelete: (patient: PatientUser) => void;
   onNoteSaved: (patientId: number) => void;
+  onReload: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
@@ -104,6 +106,7 @@ export default function PatientList({
               onEdit={() => onEdit(patient)}
               onDelete={() => onDelete(patient)}
               onNoteSaved={onNoteSaved}
+              onReload={onReload}
             />
           ))}
         </>
