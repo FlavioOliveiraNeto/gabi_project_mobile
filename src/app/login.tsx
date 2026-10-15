@@ -25,8 +25,9 @@ export default function LoginScreen() {
     try {
       const user = await login(email.trim(), password);
       router.replace(homeRoute(user));
-    } catch (error) {
-      console.log(error)
+    } catch {
+      // Mensagem já exibida via `error` do useAuth. Não logar o AxiosError:
+      // ele carrega config.data com a senha.
     }
   }
 

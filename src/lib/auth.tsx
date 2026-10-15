@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await api.delete('/users/sign_out');
-    } catch (error) {
-      console.log(error)
+    } catch {
+      // Logout é best-effort: o estado local é limpo de qualquer forma.
     } finally {
       clearAuthState();
     }
