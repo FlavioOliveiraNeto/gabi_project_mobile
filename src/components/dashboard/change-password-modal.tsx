@@ -35,7 +35,7 @@ export default function ChangePasswordModal({
     setError('');
 
     if (newPassword !== confirmPassword) return setError('As senhas não coincidem.');
-    if (newPassword.length < 6) return setError('A senha deve ter pelo menos 6 caracteres.');
+    if (newPassword.length < 12) return setError('A senha deve ter pelo menos 12 caracteres.');
 
     setIsLoading(true);
     try {
@@ -67,7 +67,7 @@ export default function ChangePasswordModal({
         value={newPassword}
         onChangeText={setNewPassword}
         secureTextEntry
-        placeholder="Mínimo 6 caracteres"
+        placeholder="Mínimo 12 caracteres"
       />
       <Field
         label="Confirme a nova senha"
